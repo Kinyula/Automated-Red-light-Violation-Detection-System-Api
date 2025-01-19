@@ -15,6 +15,7 @@ Route::middleware('auth:sanctum')->group(
     function () {
 
         Route::get('/users', [UserController::class, 'index']);
+        Route::get('/users/search', [UserController::class, 'search']);
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/users/{id}', [UserController::class, 'update']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
@@ -33,6 +34,7 @@ Route::middleware('auth:sanctum')->group(
         Route::prefix('questions')->group(function () {
             Route::get('/', [QuestionController::class, 'index']);
             Route::post('/', [QuestionController::class, 'store']);
+            Route::get('/search', [QuestionController::class, 'search'])->name('api.search');
             Route::get('/{id}', [QuestionController::class, 'show']);
             Route::put('/{id}', [QuestionController::class, 'update']);
             Route::delete('/{id}', [QuestionController::class, 'destroy']);

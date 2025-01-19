@@ -24,6 +24,17 @@ class QuestionController extends Controller
         ], 200);
     }
 
+    public function search(Request $request)
+    {
+        $query = $request->get('q', '');
+        $questions = Question::where('phone_number', 'LIKE', '%' . $query . '%')
+        ->where('reply_status', 'not replied')
+            ->orWhere('question', 'LIKE', '%' . $query . '%')
+            ->get();
+
+        return response()->json(['questions' => $questions]);
+    }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -51,6 +62,7 @@ class QuestionController extends Controller
             'data' => $question
         ], 201);
     }
+
 
     /**
      * Display the specified resource.

@@ -21,7 +21,9 @@ class UserController extends Controller
 
         if ($user->role_id == '1') {
 
-            $users = User::where('role_id', '=', '2')->get();
+            $users = User::where('role_id', '=', '2')->orderBy('created_at', 'desc')->get();
+        } elseif ($user->role_id == '2') {
+            $users = User::where('role_id', '=', '0')->orderBy('created_at', 'desc')->get();
         }
 
         return response()->json([
@@ -30,6 +32,17 @@ class UserController extends Controller
         ]);
     }
 
+
+    public function search(Request $request)
+{
+    $query = $request->get('q', '');
+    $users = User::where('last_name', 'LIKE', "%{$query}%")
+                 ->orWhere('email', 'LIKE', "%{$query}%")
+                 ->orWhere('phone_number', 'LIKE', "%{$query}%")
+                 ->get();
+
+    return response()->json($users);
+}
     /**
      * Store a newly created resource in storage.
      */

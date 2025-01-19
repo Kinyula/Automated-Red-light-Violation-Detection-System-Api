@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('phone_number');
             $table->longText('question');
+            $table->string('reply_status')->default('not replied');
             $table->timestamps();
         });
     }

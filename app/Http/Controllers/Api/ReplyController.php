@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Question;
 use App\Models\Reply;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class ReplyController extends Controller
 {
@@ -15,8 +17,16 @@ class ReplyController extends Controller
     public function index()
     {
         if (Auth::check()) {
-            $reply = Reply::with('question.user')->where('phone_number', auth()->user()->phone_number)->paginate(10);
-            return response()->json($reply);
+            if (auth()->user()->role_id === '0') {
+                $data = Reply::with(['question','user'])->where('phone_number', auth()->user()->phone_number)->paginate(10);
+                return response()->json($data);
+            }
+
+            if (auth()->user()->role_id === '2') {
+                $data = Reply::with(['question','user'])->paginate(10);
+                return response()->json($data);
+            }
+
         } else {
             return response()->json('Un authenticated user');
         }
@@ -27,7 +37,36 @@ class ReplyController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Validate incoming request data
+        // $validator = Validator::make($request->all(), [
+        //     'phone_number' => 'required|string|max:15',
+        //     'question_id' => 'required|string',
+        //     'reply' => 'required|string|max:255',
+        // ]);
+
+        // if ($validator->fails()) {
+        //     return response()->json(['errors' => $validator->errors()], 422);
+        // }
+
+        $reply = Reply::create([
+            'phone_number' => $request->phone_number,
+            'question_id' => $request->question_id,
+            'reply' => $request->reply,
+            'user_id' => auth()->user()->id
+        ]);
+
+
+        $question = Question::find($request->question_id);
+        if ($question) {
+            $question->reply_status = 'replied';
+            $question->update();
+        }
+
+
+        return response()->json([
+            'message' => 'Reply message is sent successfully',
+            'data' => $reply
+        ], 201);
     }
 
     /**
