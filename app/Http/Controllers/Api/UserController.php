@@ -65,17 +65,17 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'license_plate' => [
-                'required', // License plate cannot be empty
-                'string', // Ensure it's a string
+                'required', 
+                'string', 
                 function ($attribute, $value, $fail) {
-                    // If the license plate is not 'none', it must be unique
+
                     if ($value !== 'none' && \App\Models\User::where('license_plate', $value)->exists()) {
                         return $fail('The license plate has already been taken.');
                     }
                 },
             ],
         ]);
-        // Create the user
+
         $user = User::create([
             'first_name' => $request->input('first_name'),
             'last_name' => $request->input('last_name'),
@@ -121,15 +121,9 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found.'], 404);
         }
 
-
-        $validated = $request->validate([
-
-            'phone_number' => 'string|max:20',
-
+        $user->update([
+            'phone_number' => $request->input('phone_number')
         ]);
-
-        $user->update($validated);
-
         return response()->json([
             'message' => 'User updated successfully!',
             'user' => $user
@@ -140,22 +134,22 @@ class UserController extends Controller
     {
 
         $user = User::find($id);
-    
+
 
         if (!$user) {
             return response()->json(['message' => 'User not found.'], 404);
         }
-    
+
         $user->update([
             'first_name' => $request->input('first_name'),
             'last_name' => $request->input('last_name'),
             'email' => $request->input('email'),
             'license_plate' => $request->input('license_plate')
         ]);
-    
+
         return response()->json(['message' => 'User updated successfully.', 'user' => $user], 200);
     }
-    
+
 
     /**
      * Remove the specified resource from storage.

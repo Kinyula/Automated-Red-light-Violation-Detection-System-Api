@@ -16,13 +16,22 @@ class TwilioController extends Controller
 
     public function sendSms(Request $request)
     {
+        // Validate the incoming request
         $request->validate([
             'phone_number' => 'required',
             'message' => 'required',
+            'user_id' => 'required|integer',  // Assuming user_id is an integer
         ]);
 
+        // Send the SMS via Twilio service
         $this->twilio->sendSms($request->phone_number, $request->message);
 
-        return response()->json(['message' => 'SMS sent successfully!']);
+        // Return a JSON response with the message, user_id, and phone number
+        return response()->json([
+            'message' => 'SMS sent successfully!',
+            'user_id' => $request->user_id,
+            'phone_number' => $request->phone_number,
+            'message_content' => $request->message,
+        ]);
     }
 }
