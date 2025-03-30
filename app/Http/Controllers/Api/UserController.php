@@ -32,52 +32,49 @@ class UserController extends Controller
         ]);
     }
 
+    public function getUserByPlate($license_plate)
+    {
+        $user = User::where('license_plate', $license_plate)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        return response()->json(['phone_number' => $user->phone_number]);
+    }
 
     public function search(Request $request)
-{
-    $query = $request->get('q', '');
-    $users = User::where('last_name', 'LIKE', "%{$query}%")
-                 ->orWhere('email', 'LIKE', "%{$query}%")
-                 ->orWhere('phone_number', 'LIKE', "%{$query}%")
-                 ->get();
+    {
+        $query = $request->get('q', '');
+        $users = User::where('last_name', 'LIKE', "%{$query}%")
+            ->orWhere('email', 'LIKE', "%{$query}%")
+            ->orWhere('phone_number', 'LIKE', "%{$query}%")
+            ->get();
 
-    return response()->json($users);
-}
+        return response()->json($users);
+    }
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        // Validate incoming request data
-        // Retrieve the role_id from the request
-        $roleId = $request->input('role_id');
-
-        // Validation rules
-        $rules = [
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'phone_number' => 'required|string|max:20',
-            'email' => 'required|string|email|lowercase|unique:users',
-            'password' => 'required|string|confirmed',
-            'license_plate' => 'required|string|max:20', // Base validation
-        ];
-
-        // Conditionally apply 'unique' rule for license_plate if role_id is 0
-        if ($roleId === 0) {
-            $rules['license_plate'] .= '|unique:users,license_plate';
-        }
-
-        // Validate the request
-        $validator = Validator::make($request->all(), $rules);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
+        $request->validate([
+            'first_name' => 'required|string|max:10',
+            'last_name' => 'required|string|max:10',
+            'phone_number' => ['required', 'regex:/^(06|07|065|066|067|068|069)\d{8}$/'],
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+            'license_plate' => [
+                'required', // License plate cannot be empty
+                'string', // Ensure it's a string
+                function ($attribute, $value, $fail) {
+                    // If the license plate is not 'none', it must be unique
+                    if ($value !== 'none' && \App\Models\User::where('license_plate', $value)->exists()) {
+                        return $fail('The license plate has already been taken.');
+                    }
+                },
+            ],
+        ]);
         // Create the user
         $user = User::create([
             'first_name' => $request->input('first_name'),
@@ -86,9 +83,9 @@ class UserController extends Controller
             'email' => $request->input('email'),
             'password' => bcrypt($request->input('password')),
             'license_plate' => $request->input('license_plate'),
-            'role_id' => $roleId,
-            'position' => $request->position,
-            'department' => $request->department
+            'role_id' => $request->input('role_id'),
+            'position' => $request->input('position'),
+            'department' => $request->input('department')
         ]);
 
         return response()->json([
@@ -96,28 +93,8 @@ class UserController extends Controller
             'message' => 'User registered successfully',
             'user' => $user,
         ], 201);
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = User::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'phone_number' => $request->phone_number,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'license_plate' => $request->license_plate,
-            'role_id' => $request->role_id,
-            'position' => $request->position,
-            'department' => $request->department
-        ]);
-
-
-        return response()->json([
-            'message' => 'User registered successfully!',
-            'user' => $user
-        ], 201);
     }
+
 
     /**
      * Display the specified resource.
@@ -146,10 +123,9 @@ class UserController extends Controller
 
 
         $validated = $request->validate([
-            'first_name' => 'string|max:255',
-            'last_name' => 'string|max:255',
+
             'phone_number' => 'string|max:20',
-            'license_plate' => 'string|max:20|unique:users,license_plate,' . $id,
+
         ]);
 
         $user->update($validated);
@@ -159,6 +135,27 @@ class UserController extends Controller
             'user' => $user
         ]);
     }
+
+    public function generalUpdate(Request $request, $id)
+    {
+
+        $user = User::find($id);
+    
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+    
+        $user->update([
+            'first_name' => $request->input('first_name'),
+            'last_name' => $request->input('last_name'),
+            'email' => $request->input('email'),
+            'license_plate' => $request->input('license_plate')
+        ]);
+    
+        return response()->json(['message' => 'User updated successfully.', 'user' => $user], 200);
+    }
+    
 
     /**
      * Remove the specified resource from storage.

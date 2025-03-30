@@ -9,6 +9,7 @@ class Violation extends Model
     protected $fillable = [
         'user_id',
         'license_plate',
+        'message'
 
     ];
 }

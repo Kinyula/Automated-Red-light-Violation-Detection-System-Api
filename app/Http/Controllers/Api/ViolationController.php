@@ -17,14 +17,20 @@ class ViolationController extends Controller
      */
     public function index()
     {
-        // Retrieve all violations
-        $violations = Violation::get();
-
-        return response()->json([
-            'message' => 'Violations retrieved successfully!',
-            'data' => $violations
-        ], 200);
+        if (auth()->user()->position != 'driver') {
+            $violations = Violation::get();
+    
+            return response()->json([
+                'message' => 'Violations retrieved successfully!',
+                'violations' => $violations
+            ], 200);
+        } else {
+            return response()->json([
+                'message' => 'Access denied. Drivers are not authorized to view violations.'
+            ], 403);
+        }
     }
+    
 
     /**
      * Store a newly created resource in storage.
@@ -43,7 +49,7 @@ class ViolationController extends Controller
 
         // Create a new violation
         $violation = Violation::create([
-            'user_id' => auth()->user()->id,
+
             'license_plate' => $request->license_plate,
 
         ]);
@@ -83,7 +89,6 @@ class ViolationController extends Controller
                     'body' => $messageBody
                 ]
             );
-
         } catch (\Exception $e) {
             Log::error('Twilio SMS failed: ' . $e->getMessage());
         }

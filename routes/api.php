@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\GuestInfoController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\ReplyController;
 use App\Http\Controllers\Api\UserController;
@@ -10,7 +11,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 Route::post('/register', [UserController::class, 'store']);
+Route::get('/team', [GuestInfoController::class, 'index']);
 
+Route::get('/users/license_plate/{license_plate}', [UserController::class, 'getUserByPlate']);
 Route::middleware('auth:sanctum')->group(
     function () {
 
@@ -18,6 +21,7 @@ Route::middleware('auth:sanctum')->group(
         Route::get('/users/search', [UserController::class, 'search']);
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/users/{id}', [UserController::class, 'update']);
+        Route::put('/users/{id}', [UserController::class, 'generalUpdate']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('api.logout');
 
