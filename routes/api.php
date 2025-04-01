@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ReplyController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ViolationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\ExcelActivityController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +51,11 @@ Route::middleware('auth:sanctum')->group(
             Route::get('/{id}', [ReplyController::class, 'show']);
             Route::put('/{id}', [ReplyController::class, 'update']);
             Route::delete('/{id}', [ReplyController::class, 'destroy']);
+        });
+
+        Route::prefix('excel')->group(function () {
+            Route::get('/export', [ExcelActivityController::class, 'export']);
+            Route::post('/import', [ExcelActivityController::class, 'import']);
         });
     }
 );
