@@ -65,8 +65,8 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'license_plate' => [
-                'required', 
-                'string', 
+                'required',
+                'string',
                 function ($attribute, $value, $fail) {
 
                     if ($value !== 'none' && \App\Models\User::where('license_plate', $value)->exists()) {
@@ -154,16 +154,9 @@ class UserController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(User $id)
     {
-        $user = User::find($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found.'], 404);
-        }
-
-        $user->delete();
-
+        $id->delete();
         return response()->json(['message' => 'User deleted successfully!']);
     }
 }

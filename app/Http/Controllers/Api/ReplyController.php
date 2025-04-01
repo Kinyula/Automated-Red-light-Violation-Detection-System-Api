@@ -18,15 +18,14 @@ class ReplyController extends Controller
     {
         if (Auth::check()) {
             if (auth()->user()->role_id === '0') {
-                $data = Reply::with(['question','user'])->where('phone_number', auth()->user()->phone_number)->paginate(10);
+                $data = Reply::with(['question', 'user'])->where('phone_number', auth()->user()->phone_number)->paginate(10);
                 return response()->json($data);
             }
 
             if (auth()->user()->role_id === '2') {
-                $data = Reply::with(['question','user'])->paginate(10);
+                $data = Reply::with(['question', 'user'])->paginate(10);
                 return response()->json($data);
             }
-
         } else {
             return response()->json('Un authenticated user');
         }
@@ -96,8 +95,27 @@ class ReplyController extends Controller
             return response()->json(['message' => 'Reply not found.'], 404);
         }
 
+        $question = Question::find($reply->question_id);
+        if ($question) {
+            $question->reply_status = 'not replied';
+            $question->update();
+        }
         $reply->delete();
 
+
         return response()->json(['message' => 'Reply is deleted successfully!'], 200);
+    }
+    public function updateQuestionStatus($questionId)
+    {
+        $question = Question::find($questionId);
+
+        if (!$question) {
+            return response()->json(['message' => 'Question not found.'], 404);
+        }
+
+        $question->reply_status = 'not replied';
+        $question->save();
+
+        return response()->json(['message' => 'Question status updated successfully.'], 200);
     }
 }
