@@ -34,13 +34,16 @@ class UserController extends Controller
 
     public function getUserByPlate($license_plate)
     {
-        $user = User::where('license_plate', $license_plate)->first();
+
+        $normalized_plate = strtoupper(str_replace(' ', '', $license_plate));
+
+        $user = User::whereRaw("REPLACE(UPPER(license_plate), ' ', '') = ?", [$normalized_plate])->first();
 
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        return response()->json(['phone_number' => $user->phone_number]);
+        return response()->json(['id' =>$user->id ,'license_plate' => $user->license_plate]);
     }
 
     public function search(Request $request)

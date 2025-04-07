@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ReplyController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ViolationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\ExcelActivityController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -13,12 +14,14 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 Route::post('/register', [UserController::class, 'store']);
 Route::get('/team', [GuestInfoController::class, 'index']);
+Route::post('/store/violation', [ViolationController::class, 'store']);
+Route::get('/users', [UserController::class, 'index']);
 
 Route::get('/users/license_plate/{license_plate}', [UserController::class, 'getUserByPlate']);
+Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('api.forgot-password');
 Route::middleware('auth:sanctum')->group(
     function () {
 
-        Route::get('/users', [UserController::class, 'index']);
         Route::get('/users/search', [UserController::class, 'search']);
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/user/{id}', [UserController::class, 'update']);
@@ -29,7 +32,6 @@ Route::middleware('auth:sanctum')->group(
 
         Route::prefix('violations')->group(function () {
             Route::get('/', [ViolationController::class, 'index']);
-            Route::post('/', [ViolationController::class, 'store']);
             Route::get('/{id}', [ViolationController::class, 'show']);
             Route::put('/{id}', [ViolationController::class, 'update']);
             Route::delete('/{id}', [ViolationController::class, 'destroy']);

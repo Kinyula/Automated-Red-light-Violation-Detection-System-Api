@@ -27,10 +27,13 @@ class QuestionController extends Controller
     public function search(Request $request)
     {
         $query = $request->get('q', '');
-        $questions = Question::where('phone_number', 'LIKE', '%' . $query . '%')
+        $questions = Question::where(function ($q) use ($query) {
+            $q->where('phone_number', 'LIKE', '%' . $query . '%')
+              ->orWhere('question', 'LIKE', '%' . $query . '%');
+        })
         ->where('reply_status', 'not replied')
-            ->orWhere('question', 'LIKE', '%' . $query . '%')
-            ->get();
+        ->get();
+
 
         return response()->json(['questions' => $questions]);
     }
@@ -40,7 +43,7 @@ class QuestionController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate incoming request data
+
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|max:15',
             'question' => 'required|string|max:255',
@@ -50,7 +53,6 @@ class QuestionController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Create a new question
         $question = Question::create([
             'phone_number' => $request->phone_number,
             'question' => $request->question,

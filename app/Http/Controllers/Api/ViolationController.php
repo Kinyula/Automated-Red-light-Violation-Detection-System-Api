@@ -17,20 +17,29 @@ class ViolationController extends Controller
      */
     public function index()
     {
-        if (auth()->user()->position != 'driver') {
-            $violations = Violation::get();
-    
+        if (auth()->user()->position !== 'driver') {
+            $violations = Violation::with(['user'])->get();
+
+
             return response()->json([
                 'message' => 'Violations retrieved successfully!',
-                'violations' => $violations
+                'violations' => $violations,
+
+            ], 200);
+        } elseif (auth()->user()->position === 'driver') {
+            $violation = Violation::with(['user'])->where('user_id', auth()->user()->id)->get();
+            return response()->json([
+                'message' => 'Violations retrieved successfully!',
+                'violation' => $violation,
+
             ], 200);
         } else {
             return response()->json([
-                'message' => 'Access denied. Drivers are not authorized to view violations.'
+                'message' => 'Access denied. Drivers are not authorized to view violations.',
             ], 403);
         }
     }
-    
+
 
     /**
      * Store a newly created resource in storage.
@@ -38,24 +47,28 @@ class ViolationController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate incoming request data
-        $validator = Validator::make($request->all(), [
-            'license_plate' => 'required|string|max:20',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
         // Create a new violation
         $violation = Violation::create([
 
+            'user_id' => $request->user_id,
             'license_plate' => $request->license_plate,
+            'message' => "🚨 Traffic Violation Notice 🚨
 
+You have been recorded violating a red light traffic rule.
+
+Please pay a penalty fee of **TSh 50,000** via **M-Pesa** to the following number:
+
+📱 **+255 712 345 678**
+
+Payment Deadline: **Within 7 days of receiving this notice**
+
+⚠️ Failure to pay within the given time will result in **termination of your vehicle's license registration**.
+
+Drive responsibly. This is an automated message from the Red Light Violation Detection System.",
         ]);
 
-        // Send SMS notification using Twilio
-        $this->sendSMSNotification($request->phone_number, $violation);
+        // // Send SMS notification using Twilio
+        // $this->sendSMSNotification($request->phone_number, $violation);
 
         return response()->json([
             'message' => 'Violation recorded successfully and notification sent!',
@@ -155,6 +168,6 @@ class ViolationController extends Controller
 
         $violation->delete();
 
-        return response()->json(['message' => 'Violation deleted successfully!'], 200);
+        return response()->json(['message' => 'Violation deleted! Now you need to '], 200);
     }
 }
