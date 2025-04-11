@@ -31,6 +31,19 @@ class ReplyController extends Controller
         }
     }
 
+    public function search(Request $request)
+    {
+        $query = $request->get('q', '');
+        $replies = Reply::where(function ($q) use ($query) {
+            $q->where('phone_number', 'LIKE', '%' . $query . '%')
+              ->orWhere('reply', 'LIKE', '%' . $query . '%');
+        })
+
+        ->get();
+
+
+        return response()->json(['replies' => $replies]);
+    }
     /**
      * Store a newly created resource in storage.
      */

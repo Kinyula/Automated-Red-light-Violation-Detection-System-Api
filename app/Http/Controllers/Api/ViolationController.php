@@ -17,7 +17,7 @@ class ViolationController extends Controller
      */
     public function index()
     {
-        if (auth()->user()->position !== 'driver') {
+        if (auth()->user()->role_id !== '0') {
             $violations = Violation::with(['user'])->get();
 
 
@@ -26,7 +26,7 @@ class ViolationController extends Controller
                 'violations' => $violations,
 
             ], 200);
-        } elseif (auth()->user()->position === 'driver') {
+        } elseif (auth()->user()->role_id === '0') {
             $violation = Violation::with(['user'])->where('user_id', auth()->user()->id)->get();
             return response()->json([
                 'message' => 'Violations retrieved successfully!',
@@ -41,6 +41,14 @@ class ViolationController extends Controller
     }
 
 
+    public function search(Request $request)
+    {
+        $query = $request->get('q', '');
+        $violations = Violation::where('license_plate', 'LIKE', "%{$query}%")
+            ->get();
+
+        return response()->json($violations);
+    }
     /**
      * Store a newly created resource in storage.
      * POST /api/violations
