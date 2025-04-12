@@ -13,13 +13,8 @@ class StatisticalDataController extends Controller
      */
     public function index()
     {
-        if (auth()->user()->role_id === '2') {
-            $statisticalData = StatisticalData::with(['user'])->where('user_id', auth()->user()->id)->get();
-            return response()->json(['data' => $statisticalData]);
-        } else {
-            $statisticalData = StatisticalData::with(['user'])->get();
-            return response()->json(['data' => $statisticalData]);
-        }
+        $statisticalData = StatisticalData::with(['user'])->orderBy('created_at','desc')->get();
+        return response()->json(['data' => $statisticalData]);
     }
 
     /**
@@ -34,13 +29,10 @@ class StatisticalDataController extends Controller
         $statisticalData = new StatisticalData();
         $statisticalData->user_id = auth()->user()->id;
         $statisticalData->statistical_data = $validatedData['statistical_data'];
-        $statisticalData->save();
+
+            $statisticalData->save();
 
         return response()->json(['data' => $statisticalData], 201);
-
-
-
-
     }
 
     /**
@@ -56,7 +48,15 @@ class StatisticalDataController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $statisticalData = StatisticalData::findOrFail($id);
+
+        if ($statisticalData->exists()) {
+            $statisticalData->update([
+                'statistical_data' => $request->input('statistical_data'),
+            ]);
+        }
+
+        return response()->json(['data' => $statisticalData], 200);
     }
 
     /**
@@ -64,6 +64,10 @@ class StatisticalDataController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $deleteStatisticalData = StatisticalData::findOrFail($id);
+        if ($deleteStatisticalData->exists()) {
+            $deleteStatisticalData->delete();
+        }
+        return response()->json(['message' => 'Statistical data deleted successfully.'], 200);
     }
 }

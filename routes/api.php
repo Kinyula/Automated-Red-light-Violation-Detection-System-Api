@@ -66,7 +66,7 @@ Route::middleware('auth:sanctum')->group(
 
         Route::prefix('statistics')->group(function(){
             Route::post('/create', [StatisticalDataController::class, 'store']);
-            Route::patch('/update/{id}', [StatisticalDataController::class, 'update']);
+            Route::put('/update/{id}', [StatisticalDataController::class, 'update']);
             Route::delete('/delete/{id}', [StatisticalDataController::class, 'destroy']);
         });
     }
