@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -59,6 +60,15 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
 
         $request->session()->regenerateToken();
+
+      $user = User::where('id', Auth::id())->update([
+            'online_status' => 'offline',
+            'last_activity' => now()
+        ]);
+
+        if ($user) {
+            $user->tokens()->delete();
+        }
 
         return response()->noContent();
     }

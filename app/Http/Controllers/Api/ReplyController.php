@@ -7,6 +7,7 @@ use App\Models\Question;
 use App\Models\Reply;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class ReplyController extends Controller
@@ -18,12 +19,12 @@ class ReplyController extends Controller
     {
         if (Auth::check()) {
             if (auth()->user()->role_id === '0') {
-                $data = Reply::with(['question', 'user'])->where('phone_number', auth()->user()->phone_number)->paginate(10);
+                $data = Reply::with(['question', 'user'])->where('phone_number', auth()->user()->phone_number)->orderBy('created_at', 'desc')->paginate(10);
                 return response()->json($data);
             }
 
             if (auth()->user()->role_id === '2') {
-                $data = Reply::with(['question', 'user'])->paginate(10);
+                $data = Reply::with(['question', 'user'])->orderBy('created_at', 'desc')->paginate(10);
                 return response()->json($data);
             }
         } else {
@@ -60,6 +61,7 @@ class ReplyController extends Controller
         //     return response()->json(['errors' => $validator->errors()], 422);
         // }
 
+
         $reply = Reply::create([
             'phone_number' => $request->phone_number,
             'question_id' => $request->question_id,
@@ -73,14 +75,51 @@ class ReplyController extends Controller
             $question->reply_status = 'replied';
             $question->update();
         }
-
-
+        // Send SMS notification
+        $this->sendSMSNotification($request->phone_number, $request->reply);
+        // Log the reply for debugging
+        Log::info('Reply created:', [
+            'reply' => $reply,
+            'user_id' => auth()->user()->id,
+            'question_id' => $request->question_id
+        ]);
         return response()->json([
             'message' => 'Reply message is sent successfully',
             'data' => $reply
         ], 201);
     }
 
+    private function sendSMSNotification($phoneNumber, $replyData)
+    {
+        $username = env('AFRICASTALKING_USERNAME');
+        $apiKey = env('AFRICASTALKING_API_KEY');
+
+        $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
+
+
+        if (strpos($phoneNumber, '255') !== 0) {
+            $phoneNumber = '255' . substr($phoneNumber, -9);
+        }
+
+        try {
+            // Initialize Africa's Talking SDK
+            $AT = new \AfricasTalking\SDK\AfricasTalking($username, $apiKey);
+            $sms = $AT->sms();
+
+            // Send the SMS
+            $result = $sms->send([
+                'to'      => $phoneNumber,
+                'message' => $replyData,
+                // 'from' is optional if you have a shortcode or sender ID configured
+            ]);
+
+            // Log the response for debugging
+            Log::info('Africa\'s Talking SMS response:', (array)$result);
+        } catch (\Exception $e) {
+            Log::error('Africa\'s Talking SMS failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to send SMS notification.'], 500);
+        }
+    }
     /**
      * Display the specified resource.
      */

@@ -27,7 +27,10 @@ class User extends Authenticatable
         'license_plate',
         'role_id',
         'position',
-        'department'
+        'department',
+        'online_status',
+        'last_activity',
+        
     ];
 
     /**

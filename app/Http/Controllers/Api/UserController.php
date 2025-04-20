@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,19 +17,33 @@ class UserController extends Controller
      */
     public function index()
     {
-        $user = Auth::user();
+        $user = User::where('id', Auth::user()->id)->first();
+
+        // Update current user's status
+        $user->update([
+            'online_status' => 'online',
+            'last_activity' => now()
+        ]);
+
         $users = [];
+        $OnlineUsers = User::where('role_id', '0')->where('online_status', 'online')->count();
+        $OfflineUsers = User::where('role_id', '0')->where('online_status', 'offline')->count();
 
         if ($user->role_id == '1') {
-
-            $users = User::where('role_id', '=', '2')->orderBy('created_at', 'desc')->get();
+            $users = User::where('role_id', '2')
+                       ->orderBy('created_at', 'desc')
+                       ->get();
         } elseif ($user->role_id == '2') {
-            $users = User::where('role_id', '=', '0')->orderBy('created_at', 'desc')->get();
+            $users = User::where('role_id', '0')
+                       ->orderBy('created_at', 'desc')
+                       ->get();
         }
 
         return response()->json([
             'user' => $user,
-            'users' => $users
+            'users' => $users,
+            'online' => $OnlineUsers,
+            'offline' => $OfflineUsers,
         ]);
     }
 
@@ -43,7 +58,7 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        return response()->json(['id' =>$user->id ,'license_plate' => $user->license_plate]);
+        return response()->json(['id' => $user->id, 'license_plate' => $user->license_plate]);
     }
 
     public function search(Request $request)

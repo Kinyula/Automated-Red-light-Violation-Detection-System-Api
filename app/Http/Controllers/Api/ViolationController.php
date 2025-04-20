@@ -8,6 +8,7 @@ use App\Models\Violation;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Twilio\Rest\Client;
+use App\Models\User;
 
 class ViolationController extends Controller
 {
@@ -18,7 +19,7 @@ class ViolationController extends Controller
     public function index()
     {
         if (auth()->user()->role_id !== '0') {
-            $violations = Violation::with(['user'])->get();
+            $violations = Violation::with(['user'])->orderBy('created_at', 'desc')->get();
 
 
             return response()->json([
@@ -27,7 +28,7 @@ class ViolationController extends Controller
 
             ], 200);
         } elseif (auth()->user()->role_id === '0') {
-            $violation = Violation::with(['user'])->where('user_id', auth()->user()->id)->get();
+            $violation = Violation::with(['user'])->where('user_id', auth()->user()->id)->orderBy('created_at', 'desc')->get();
             return response()->json([
                 'message' => 'Violations retrieved successfully!',
                 'violation' => $violation,
@@ -53,67 +54,101 @@ class ViolationController extends Controller
      * Store a newly created resource in storage.
      * POST /api/violations
      */
+
+
     public function store(Request $request)
     {
-        // Create a new violation
-        $violation = Violation::create([
 
-            'user_id' => $request->user_id,
-            'license_plate' => $request->license_plate,
-            'message' => "🚨 Traffic Violation Notice 🚨
 
-You have been recorded violating a red light traffic rule.
-
-Please pay a penalty fee of **TSh 50,000** via **M-Pesa** to the following number:
-
-📱 **+255 712 345 678**
-
-Payment Deadline: **Within 7 days of receiving this notice**
-
-⚠️ Failure to pay within the given time will result in **termination of your vehicle's license registration**.
-
-Drive responsibly. This is an automated message from the Red Light Violation Detection System.",
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'license_plate' => 'required|string|max:20',
         ]);
 
-        // // Send SMS notification using Twilio
-        // $this->sendSMSNotification($request->phone_number, $violation);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Get the user first to access their phone number
+        $user = User::find($request->user_id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        $message = "🚨 Traffic Violation Notice 🚨\n\n" .
+            "Dear {$user->first_name} {$user->last_name},\n\n" .
+            "You have been recorded violating a red light traffic rule.\n\n" .
+            "License Plate: {$request->license_plate}\n" .
+            "Please pay a penalty fee of TSh 50,000 via M-Pesa to the following number:\n\n" .
+            "📱 +255 712 345 678\n\n" .
+            "Payment Deadline: Within 7 days of receiving this notice\n\n" .
+            "⚠️ Failure to pay within the given time will result in termination of your vehicle's license registration.\n\n" .
+            "Drive responsibly. This is an automated message from the Red Light Violation Detection System.";
+
+
+
+
+        $violation = Violation::create([
+            'user_id' => $request->user_id,
+            'license_plate' => $request->license_plate,
+            'message' => $message,
+        ]);
+
+
+        if ($user->phone_number) {
+            // Send SMS notification using Africa's Talking
+            $this->sendSMSNotification($user->phone_number, $message);
+        } else {
+            Log::warning("No phone number found for user ID: {$user->id}");
+        }
 
         return response()->json([
-            'message' => 'Violation recorded successfully and notification sent!',
+            'message' => 'Violation recorded successfully' . ($user->phone_number ? ' and notification sent!' : ' but no phone number available for notification'),
             'data' => $violation
         ], 201);
     }
 
     /**
-     * Send an SMS notification using Twilio.
+     * Send an SMS notification using Africa's Talking.
      */
-    private function sendSMSNotification($phoneNumber, $violation)
+    private function sendSMSNotification($phoneNumber, $message)
     {
-        $twilioSid = env('TWILIO_SID');
-        $twilioAuthToken = env('TWILIO_AUTH_TOKEN');
-        $twilioPhoneNumber = env('TWILIO_PHONE_NUMBER');
+        $username = env('AFRICASTALKING_USERNAME');
+        $apiKey = env('AFRICASTALKING_API_KEY');
+
+        // Remove any non-digit characters from the phone number
+        $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
+
+        // Add country code if not present (assuming Tanzania numbers)
+        if (strpos($phoneNumber, '255') !== 0) {
+            $phoneNumber = '255' . substr($phoneNumber, -9);
+        }
 
         try {
-            $twilio = new Client($twilioSid, $twilioAuthToken);
-
-            // SMS content
-            $messageBody = "Traffic Violation Alert!\n" .
-                "License Plate: {$violation->license_plate}\n" .
-                "Violation Time: {$violation->violation_time}\n" .
-                "Traffic Light State: {$violation->traffic_light_state}";
+            // Initialize Africa's Talking SDK
+            $AT = new \AfricasTalking\SDK\AfricasTalking($username, $apiKey);
+            $sms = $AT->sms();
 
             // Send the SMS
-            $twilio->messages->create(
-                $phoneNumber, // Destination phone number
-                [
-                    'from' => $twilioPhoneNumber,
-                    'body' => $messageBody
-                ]
-            );
+            $result = $sms->send([
+                'to'      => $phoneNumber,
+                'message' => $message,
+                // 'from' is optional if you have a shortcode or sender ID configured
+            ]);
+
+            // Log the response for debugging
+            Log::info('Africa\'s Talking SMS response:', (array)$result);
         } catch (\Exception $e) {
-            Log::error('Twilio SMS failed: ' . $e->getMessage());
+            Log::error('Africa\'s Talking SMS failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to send SMS notification.'], 500);
         }
     }
+
+    /**
+     * Send an SMS notification using Twilio.
+     */
+
 
     /**
      * Display the specified resource.
