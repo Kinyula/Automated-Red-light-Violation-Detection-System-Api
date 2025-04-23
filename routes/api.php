@@ -17,6 +17,7 @@ Route::post('/register', [UserController::class, 'store']);
 Route::get('/team', [GuestInfoController::class, 'index']);
 Route::post('/store/violation', [ViolationController::class, 'store']);
 Route::get('/users', [UserController::class, 'index']);
+Route::get('/user/status/show', [UserController::class, 'statusShow']);
 Route::get('statistics/data', [StatisticalDataController::class, 'index']);
 
 Route::get('/users/license_plate/{license_plate}', [UserController::class, 'getUserByPlate']);
@@ -25,6 +26,8 @@ Route::middleware('auth:sanctum')->group(
     function () {
 
         Route::get('/users/search', [UserController::class, 'search']);
+        Route::put('/user/status/{id}', [UserController::class, 'status']);
+
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/user/{id}', [UserController::class, 'update']);
         Route::put('/users/{id}', [UserController::class, 'generalUpdate']);

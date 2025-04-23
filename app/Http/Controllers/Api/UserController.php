@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Status;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,12 +32,12 @@ class UserController extends Controller
 
         if ($user->role_id == '1') {
             $users = User::where('role_id', '2')
-                       ->orderBy('created_at', 'desc')
-                       ->get();
+                ->orderBy('created_at', 'desc')
+                ->get();
         } elseif ($user->role_id == '2') {
             $users = User::where('role_id', '0')
-                       ->orderBy('created_at', 'desc')
-                       ->get();
+                ->orderBy('created_at', 'desc')
+                ->get();
         }
 
         return response()->json([
@@ -45,6 +46,24 @@ class UserController extends Controller
             'online' => $OnlineUsers,
             'offline' => $OfflineUsers,
         ]);
+    }
+    public function statusShow()
+    {
+        $userLikeStatusCount = Status::where('like', '=' , 1)->count();
+        $userDislikeStatusCount = Status::where('dislike', '=' , 1)->count();
+        $userStatus = Status::where('user_id', Auth::user()->id)->first();
+        if (!$userStatus) {
+            return response()->json(['message' => 'Status not found'], 404);
+        }
+
+        return response()->json([
+            'like' => $userStatus->like,
+            'dislike' => $userStatus->dislike,
+            'userLikeStatusCount' => $userLikeStatusCount,
+            'userDislikeStatusCount' => $userDislikeStatusCount,
+        ]);
+
+
     }
 
     public function getUserByPlate($license_plate)
@@ -71,7 +90,23 @@ class UserController extends Controller
 
         return response()->json($users);
     }
-    /**
+
+    public function status(Request $request, $id)
+    {
+
+        $status = Status::where('user_id', $id)->firstOrFail();
+
+        // Atomic update
+        $status->update([
+            'like' => $request->input('like', $status->like),
+            'dislike' => $request->input('dislike', $status->dislike),
+        ]);
+
+        return response()->json([
+            'message' => 'Status updated successfully',
+            'status' => $status->fresh()
+        ]);
+    }    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
@@ -104,6 +139,12 @@ class UserController extends Controller
             'role_id' => $request->input('role_id'),
             'position' => $request->input('position'),
             'department' => $request->input('department')
+        ]);
+
+        $status = Status::create([
+            'user_id' => $user->id,
+            'like' => false,
+            'dislike' => false,
         ]);
 
         return response()->json([
