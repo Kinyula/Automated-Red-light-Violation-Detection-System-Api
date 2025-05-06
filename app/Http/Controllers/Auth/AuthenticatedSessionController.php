@@ -43,6 +43,7 @@ class AuthenticatedSessionController extends Controller
                     'license_plate' => $user->license_plate,
                     'role_id' => $user->role_id
                 ]
+    
             ], 200);
         }
 
@@ -55,20 +56,23 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): Response
     {
-        Auth::guard('web')->logout();
+        $user = $request->user(); // Get user BEFORE logout
 
-        $request->session()->invalidate();
-
-        $request->session()->regenerateToken();
-
-      $user = User::where('id', Auth::id())->update([
-            'online_status' => 'offline',
-            'last_activity' => now()
-        ]);
-
+        // Update user status (if user exists)
         if ($user) {
+            $user->update([
+                'online_status' => 'offline',
+                'last_activity' => now()
+            ]);
+
+            // Revoke tokens (if using Sanctum/API tokens)
             $user->tokens()->delete();
         }
+
+        // Logout and invalidate session
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->noContent();
     }

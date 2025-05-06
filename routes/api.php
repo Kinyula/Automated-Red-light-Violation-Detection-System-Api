@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\GuestInfoController;
+use App\Http\Controllers\Api\PoliceOfficerController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\ReplyController;
 use App\Http\Controllers\Api\StatisticalDataController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ViolationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\ExcelActivityController;
 use Illuminate\Http\Request;
@@ -19,6 +21,7 @@ Route::post('/store/violation', [ViolationController::class, 'store']);
 Route::get('/users', [UserController::class, 'index']);
 Route::get('/user/status/show', [UserController::class, 'statusShow']);
 Route::get('statistics/data', [StatisticalDataController::class, 'index']);
+Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('api.reset-password');
 
 Route::get('/users/license_plate/{license_plate}', [UserController::class, 'getUserByPlate']);
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('api.forgot-password');
@@ -67,10 +70,19 @@ Route::middleware('auth:sanctum')->group(
             Route::post('/import', [ExcelActivityController::class, 'import']);
         });
 
-        Route::prefix('statistics')->group(function(){
+        Route::prefix('statistics')->group(function () {
             Route::post('/create', [StatisticalDataController::class, 'store']);
             Route::put('/update/{id}', [StatisticalDataController::class, 'update']);
             Route::delete('/delete/{id}', [StatisticalDataController::class, 'destroy']);
+        });
+
+        Route::prefix('police')->group(function () {
+            Route::get('/', [PoliceOfficerController::class, 'index']);
+            Route::post('/', [PoliceOfficerController::class, 'store']);
+            Route::get('/search', [PoliceOfficerController::class, 'search'])->name('api.search');
+            Route::get('/{id}', [PoliceOfficerController::class, 'show']);
+            Route::put('/{id}', [PoliceOfficerController::class, 'update']);
+            Route::delete('/{id}', [PoliceOfficerController::class, 'destroy']);
         });
     }
 );

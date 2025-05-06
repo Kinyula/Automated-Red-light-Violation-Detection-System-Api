@@ -81,7 +81,7 @@ class ViolationController extends Controller
             "You have been recorded violating a red light traffic rule.\n\n" .
             "License Plate: {$request->license_plate}\n" .
             "Please pay a penalty fee of TSh 50,000 via M-Pesa to the following number:\n\n" .
-            "📱 +255 712 345 678\n\n" .
+            "📱 +255 769 531 356\n\n" .
             "Payment Deadline: Within 7 days of receiving this notice\n\n" .
             "⚠️ Failure to pay within the given time will result in termination of your vehicle's license registration.\n\n" .
             "Drive responsibly. This is an automated message from the Red Light Violation Detection System.";
