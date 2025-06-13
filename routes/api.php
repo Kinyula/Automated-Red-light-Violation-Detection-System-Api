@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(
         Route::put('/user/{id}', [UserController::class, 'update']);
         Route::put('/users/{id}', [UserController::class, 'generalUpdate']);
         Route::delete('/user/destroy/{id}', [UserController::class, 'destroy']);
+        Route::get('/user/verified/', [UserController::class, 'isVerified']);
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('api.logout');
 
 

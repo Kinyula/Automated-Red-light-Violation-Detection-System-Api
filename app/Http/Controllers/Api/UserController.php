@@ -22,6 +22,7 @@ class UserController extends Controller
 
         // Update current user's status
         $user->update([
+            'is_verified' => true,
             'online_status' => 'online',
             'last_activity' => now()
         ]);
@@ -49,8 +50,8 @@ class UserController extends Controller
     }
     public function statusShow()
     {
-        $userLikeStatusCount = Status::where('like', '=' , 1)->count();
-        $userDislikeStatusCount = Status::where('dislike', '=' , 1)->count();
+        $userLikeStatusCount = Status::where('like', '=', 1)->count();
+        $userDislikeStatusCount = Status::where('dislike', '=', 1)->count();
         $userStatus = Status::where('user_id', Auth::user()->id)->first();
         if (!$userStatus) {
             return response()->json(['message' => 'Status not found'], 404);
@@ -62,9 +63,8 @@ class UserController extends Controller
             'userLikeStatusCount' => $userLikeStatusCount,
             'userDislikeStatusCount' => $userDislikeStatusCount,
         ]);
-
-
     }
+
 
     public function getUserByPlate($license_plate)
     {
@@ -106,7 +106,8 @@ class UserController extends Controller
             'message' => 'Status updated successfully',
             'status' => $status->fresh()
         ]);
-    }    /**
+    }
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)

@@ -69,7 +69,6 @@ class ReplyController extends Controller
             'user_id' => auth()->user()->id
         ]);
 
-
         $question = Question::find($request->question_id);
         if ($question) {
             $question->reply_status = 'replied';

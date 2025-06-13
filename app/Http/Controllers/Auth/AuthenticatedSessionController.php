@@ -23,6 +23,7 @@ class AuthenticatedSessionController extends Controller
             // User successfully authenticated, generate a token for the user
             $user = Auth::user();
 
+
             // Ensure the user model uses HasApiTokens
             if (!method_exists($user, 'createToken')) {
                 return response()->json(['message' => 'Token creation method not found'], 500);
@@ -30,6 +31,8 @@ class AuthenticatedSessionController extends Controller
 
             // Create the API token
             $token = $user->createToken('Laravel')->plainTextToken;
+
+
 
             // Return the token and user details
             return response()->json([
@@ -41,9 +44,10 @@ class AuthenticatedSessionController extends Controller
                     'email' => $user->email,
                     'phone_number' => $user->phone_number,
                     'license_plate' => $user->license_plate,
-                    'role_id' => $user->role_id
+                    'role_id' => $user->role_id,
+                    'is_verified' => $user->is_verified
                 ]
-    
+
             ], 200);
         }
 
@@ -54,22 +58,25 @@ class AuthenticatedSessionController extends Controller
     /**
      * Destroy an authenticated session.
      */
+
+
     public function destroy(Request $request): Response
     {
-        $user = $request->user(); // Get user BEFORE logout
+        $user = $request->user();
 
-        // Update user status (if user exists)
+
         if ($user) {
             $user->update([
+                'is_verified' => false,
                 'online_status' => 'offline',
                 'last_activity' => now()
             ]);
 
-            // Revoke tokens (if using Sanctum/API tokens)
             $user->tokens()->delete();
         }
 
-        // Logout and invalidate session
+// logout and invalidate session
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
