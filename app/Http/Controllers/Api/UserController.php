@@ -18,7 +18,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $user = User::where('id', Auth::user()->id)->first();
+        $user = User::where('id', auth()->user()->id)?->first();
 
         // Update current user's status
         $user->update([
