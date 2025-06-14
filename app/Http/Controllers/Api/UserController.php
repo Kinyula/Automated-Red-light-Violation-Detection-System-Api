@@ -31,6 +31,7 @@ public function index()
         ]);
     }
 
+
     $users = [];
     $onlineUsersCount = User::where('role_id', '0')->where('online_status', 'online')->count();
     $offlineUsersCount = User::where('role_id', '0')->where('online_status', 'offline')->count();
