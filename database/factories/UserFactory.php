@@ -23,12 +23,18 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        // Ensure that 'first_name' is unique and 'email' is unique
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'first_name' => fake()->name(),
+            'first_name' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'phone_number' => fake()->phoneNumber(),
+            'license_plate' => fake()->unique()->bothify('??###??'),
+            'role_id' => '0',
+            'position' => 'driver',
+            'department' => 'none',
         ];
     }
 
