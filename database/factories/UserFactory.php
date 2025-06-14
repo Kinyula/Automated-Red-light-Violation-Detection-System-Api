@@ -24,9 +24,10 @@ class UserFactory extends Factory
     public function definition(): array
     {
         // Ensure that 'first_name' is unique and 'email' is unique
+        // Note: 'first_name' should not be unique, so we use 'name()' instead of 'unique()->name()'
         return [
             'first_name' => fake()->name(),
-            'first_name' => fake()->unique()->safeEmail(),
+            'last_name' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
