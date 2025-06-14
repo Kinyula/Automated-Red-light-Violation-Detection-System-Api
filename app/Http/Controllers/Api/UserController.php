@@ -18,34 +18,61 @@ class UserController extends Controller
      */
     public function index()
     {
-        $user = User::where('id', auth()->user()->id)?->first();
+        // Check if user is authenticated
+        if (!Auth::check()) {
+            return response()->json([
+                'message' => 'Unauthorized - Please login first'
+            ], 401);
+        }
 
-        // Update current user's status
+        // Get authenticated user
+        $user = Auth::user();
+
+        // Update user status
         $user->update([
             'is_verified' => true,
             'online_status' => 'online',
             'last_activity' => now()
         ]);
 
+        // Initialize variables
         $users = [];
-        $OnlineUsers = User::where('role_id', '0')->where('online_status', 'online')->count();
-        $OfflineUsers = User::where('role_id', '0')->where('online_status', 'offline')->count();
+        $onlineUsersCount = 0;
+        $offlineUsersCount = 0;
 
-        if ($user->role_id == '1') {
-            $users = User::where('role_id', '2')
+        // Get counts based on role
+        if ($user->role_id == '1') { // Admin
+            $users = User::where('role_id', '2') // Get all managers
                 ->orderBy('created_at', 'desc')
                 ->get();
-        } elseif ($user->role_id == '2') {
-            $users = User::where('role_id', '0')
+
+            $onlineUsersCount = User::where('role_id', '0')
+                ->where('online_status', 'online')
+                ->count();
+
+            $offlineUsersCount = User::where('role_id', '0')
+                ->where('online_status', 'offline')
+                ->count();
+
+        } elseif ($user->role_id == '2') { // Manager
+            $users = User::where('role_id', '0') // Get all regular users
                 ->orderBy('created_at', 'desc')
                 ->get();
+
+            $onlineUsersCount = User::where('role_id', '0')
+                ->where('online_status', 'online')
+                ->count();
+
+            $offlineUsersCount = User::where('role_id', '0')
+                ->where('online_status', 'offline')
+                ->count();
         }
 
         return response()->json([
             'user' => $user,
             'users' => $users,
-            'online' => $OnlineUsers,
-            'offline' => $OfflineUsers,
+            'online' => $onlineUsersCount,
+            'offline' => $offlineUsersCount,
         ]);
     }
     public function statusShow()
