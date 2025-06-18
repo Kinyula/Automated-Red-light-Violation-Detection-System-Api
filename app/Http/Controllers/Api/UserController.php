@@ -16,43 +16,43 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-public function index()
-{
-    // Remove the auth check completely
-    $user = User::first(); // Or any other default user if needed
+    public function index()
+    {
+        $user = User::where('id', Auth::user()->id)->first();
+        if (auth()->check()) {
 
-    // If you still want to track activity for authenticated users
-    if (auth()->check()) {
-        $user = auth()->user();
-        $user->update([
-            'is_verified' => true,
-            'online_status' => 'online',
-            'last_activity' => now()
+            // Update current user's status
+            $user->update([
+                'is_verified' => true,
+                'online_status' => 'online',
+                'last_activity' => now()
+            ]);
+        }
+
+
+
+
+        $users = [];
+        $OnlineUsers = User::where('role_id', '0')->where('online_status', 'online')->count();
+        $OfflineUsers = User::where('role_id', '0')->where('online_status', 'offline')->count();
+
+        if ($user->role_id == '1') {
+            $users = User::where('role_id', '2')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } elseif ($user->role_id == '2') {
+            $users = User::where('role_id', '0')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
+        return response()->json([
+            'user' => $user,
+            'users' => $users,
+            'online' => $OnlineUsers,
+            'offline' => $OfflineUsers,
         ]);
     }
-
-
-    $users = [];
-    $onlineUsersCount = User::where('role_id', '0')->where('online_status', 'online')->count();
-    $offlineUsersCount = User::where('role_id', '0')->where('online_status', 'offline')->count();
-
-    if ($user && $user->role_id == '1') {
-        $users = User::where('role_id', '2')
-            ->orderBy('created_at', 'desc')
-            ->get();
-    } elseif ($user && $user->role_id == '2') {
-        $users = User::where('role_id', '0')
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }
-
-    return response()->json([
-        'user' => $user,
-        'users' => $users,
-        'online' => $onlineUsersCount,
-        'offline' => $offlineUsersCount,
-    ]);
-}
     public function statusShow()
     {
         $userLikeStatusCount = Status::where('like', '=', 1)->count();
@@ -127,9 +127,12 @@ public function index()
                 'required',
                 'string',
                 function ($attribute, $value, $fail) {
+                    // Keep 'none' as lowercase, uppercase everything else
+                    $normalizedValue = $value === 'none' ? $value : strtoupper($value);
 
-                    if ($value !== 'none' && \App\Models\User::where('license_plate', $value)->exists()) {
-                        return $fail('The license plate has already been taken.');
+                    // Check uniqueness against the normalized value
+                    if ($value !== 'none' && \App\Models\User::where('license_plate', $normalizedValue)->exists()) {
+                        $fail('The license plate has already been taken.');
                     }
                 },
             ],
@@ -161,6 +164,14 @@ public function index()
     }
 
 
+
+    public function checkEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|unique:users,email'
+        ]);
+        return response()->json(['available' => true]);
+    }
     /**
      * Display the specified resource.
      */

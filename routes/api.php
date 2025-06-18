@@ -22,6 +22,7 @@ Route::get('/users', [UserController::class, 'index']);
 Route::get('/user/status/show', [UserController::class, 'statusShow']);
 Route::get('statistics/data', [StatisticalDataController::class, 'index']);
 Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('api.reset-password');
+Route::post('/check-email', [UserController::class, 'checkEmail'])->name('api.check-email');
 
 Route::get('/users/license_plate/{license_plate}', [UserController::class, 'getUserByPlate']);
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('api.forgot-password');

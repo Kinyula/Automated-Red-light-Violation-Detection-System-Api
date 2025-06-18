@@ -58,8 +58,6 @@ class ViolationController extends Controller
 
     public function store(Request $request)
     {
-
-
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
             'license_plate' => 'required|string|max:20',
@@ -69,25 +67,27 @@ class ViolationController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Get the user first to access their phone number
         $user = User::find($request->user_id);
 
         if (!$user) {
             return response()->json(['message' => 'User not found.'], 404);
         }
 
-        $message = "🚨 Traffic Violation Notice 🚨\n\n" .
-            "Dear {$user->first_name} {$user->last_name},\n\n" .
-            "You have been recorded violating a red light traffic rule.\n\n" .
-            "License Plate: {$request->license_plate}\n" .
-            "Please pay a penalty fee of TSh 50,000 via M-Pesa to the following number:\n\n" .
-            "📱 +255 769 531 356\n\n" .
-            "Payment Deadline: Within 7 days of receiving this notice\n\n" .
-            "⚠️ Failure to pay within the given time will result in termination of your vehicle's license registration.\n\n" .
-            "Drive responsibly. This is an automated message from the Red Light Violation Detection System.";
+        $controlNumber = 'NAMBARI YA KUMBUKUMBU : ' . strtoupper(substr(md5(time() . $user->id), 0, 8));
+        $fineAmount = 'TZS 50,000';
 
-
-
+        $message = "🚨 Taarifa ya Ukiukaji wa trafiki 🚨\n\n" .
+            "Mpendwa {$user->first_name} {$user->last_name},\n\n" .
+            "Umebainika kukiuka sheria ya trafiki ya kuvuka wakati wa Taa nyekundu.\n\n" .
+            " Nambari ya Leseni: {$request->license_plate}\n" .
+            " Nambari ya Kudhibiti: {$controlNumber}\n" .
+            " Kiasi cha Faini: {$fineAmount}\n\n" .
+            " MALIPO KWA MTANDAO:\n" .
+            "• Airtel Money: 0683878268\n" .
+            "• M-Pesa: 0769531356\n\n" .
+            "Tafadhali zingatia sheria za trafiki ili kuepuka adhabu zaidi.\n\n" .
+            "Asante kwa ushirikiano wako.\n\n" .
+            "© Mamlaka ya Usimamizi wa Trafiki";
 
         $violation = Violation::create([
             'user_id' => $request->user_id,
@@ -95,10 +95,14 @@ class ViolationController extends Controller
             'message' => $message,
         ]);
 
-
+        // Enhanced SMS notification handling
         if ($user->phone_number) {
-            // Send SMS notification using Africa's Talking
-            $this->sendSMSNotification($user->phone_number, $message);
+            $smsSent = $this->sendSMSNotification($user->phone_number, $message);
+
+            if (!$smsSent) {
+                Log::error("Failed to send SMS notification for violation ID: {$violation->id}");
+                // You might want to queue a retry here or notify admins
+            }
         } else {
             Log::warning("No phone number found for user ID: {$user->id}");
         }
@@ -110,45 +114,121 @@ class ViolationController extends Controller
     }
 
     /**
-     * Send an SMS notification using Africa's Talking.
+     * Send an SMS notification using Africa's Talking with better error handling
      */
     private function sendSMSNotification($phoneNumber, $message)
     {
         $username = env('AFRICASTALKING_USERNAME');
         $apiKey = env('AFRICASTALKING_API_KEY');
+        $senderId = env('AFRICASTALKING_SENDER_ID', 'INFORM'); // Default to 'INFORM' if not set
 
-        // Remove any non-digit characters from the phone number
-        $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
+        if (empty($username) || empty($apiKey)) {
+            Log::error('Africa\'s Talking credentials not configured');
+            return false;
+        }
 
-        // Add country code if not present (assuming Tanzania numbers)
-        if (strpos($phoneNumber, '255') !== 0) {
-            $phoneNumber = '255' . substr($phoneNumber, -9);
+        // Format phone number to international format
+        $phoneNumber = $this->formatPhoneNumber($phoneNumber);
+        if (!$phoneNumber) {
+            Log::error("Invalid phone number format: {$phoneNumber}");
+            return false;
         }
 
         try {
-            // Initialize Africa's Talking SDK
             $AT = new \AfricasTalking\SDK\AfricasTalking($username, $apiKey);
             $sms = $AT->sms();
 
-            // Send the SMS
-            $result = $sms->send([
-                'to'      => $phoneNumber,
+            $options = [
+                'to' => $phoneNumber,
                 'message' => $message,
-                // 'from' is optional if you have a shortcode or sender ID configured
-            ]);
+                'enqueue' => true
+            ];
 
-            // Log the response for debugging
-            Log::info('Africa\'s Talking SMS response:', (array)$result);
+            // Only add senderId if it's not empty (some accounts may not have this privilege)
+            if (!empty($senderId)) {
+                $options['from'] = $senderId;
+            }
+
+            $result = $sms->send($options);
+
+            if ($result['status'] === 'success') {
+                $recipient = $result['data']->SMSMessageData->Recipients[0] ?? null;
+
+                Log::info("SMS sent successfully", [
+                    'to' => $phoneNumber,
+                    'sender_id' => $senderId ?? 'default',
+                    'message_id' => $recipient->messageId ?? null,
+                    'cost' => $recipient->cost ?? null,
+                    'status' => $recipient->status ?? null
+                ]);
+
+                return true;
+            } else {
+                Log::error("Africa's Talking API error", [
+                    'status' => $result['status'],
+                    'error' => $result['data']->SMSMessageData->Recipients[0]->status ?? 'Unknown error',
+                    'request' => $options
+                ]);
+                return false;
+            }
         } catch (\Exception $e) {
-            Log::error('Africa\'s Talking SMS failed: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to send SMS notification.'], 500);
+            Log::error('SMS sending failed', [
+                'exception' => $e->getMessage(),
+                'phone' => $phoneNumber,
+                'sender_id' => $senderId
+            ]);
+            return false;
         }
     }
 
     /**
-     * Send an SMS notification using Twilio.
+     * Format phone number to international format
      */
+    private function formatPhoneNumber($phoneNumber)
+    {
+        // Return false if empty
+        if (empty($phoneNumber)) {
+            Log::error("Empty phone number provided");
+            return false;
+        }
 
+        // Remove all non-digit characters
+        $digits = preg_replace('/[^0-9]/', '', (string)$phoneNumber);
+
+        // Check for minimum length (Tanzanian numbers are 9-12 digits after cleaning)
+        if (strlen($digits) < 9 || strlen($digits) > 12) {
+            Log::warning("Invalid phone number length", [
+                'original' => $phoneNumber,
+                'digits' => $digits,
+                'length' => strlen($digits)
+            ]);
+            return false;
+        }
+
+        // Handle local Tanzanian format (068..., 078..., etc.)
+        if ($digits[0] === '0' && strlen($digits) === 10) {
+            // Convert to international format (255...)
+            return '255' . substr($digits, 1);
+        }
+
+        // Handle international format (255...)
+        if (substr($digits, 0, 3) === '255' && strlen($digits) === 12) {
+            return $digits;
+        }
+
+        // Handle numbers with country code but missing leading zero (+25578...)
+        if (strlen($digits) === 12 && $digits[0] !== '0') {
+            return $digits;
+        }
+
+        // If we get here, the format isn't recognized
+        Log::warning("Phone number format not recognized", [
+            'original' => $phoneNumber,
+            'digits' => $digits,
+            'length' => strlen($digits)
+        ]);
+        return false;
+    }
 
     /**
      * Display the specified resource.

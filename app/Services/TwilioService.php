@@ -18,8 +18,8 @@ class AfricaTalkingService
 
     protected function initializeService()
     {
-        $username = config('africastalking.username');
-        $apiKey = config('africastalking.api_key');
+        $username = env('AFRICASTALKING_USERNAME');
+        $apiKey = env('AFRICASTALKING_API_KEY');
 
         if (empty($username) || empty($apiKey)) {
             throw new \RuntimeException('Africa\'s Talking credentials not configured');
@@ -34,23 +34,32 @@ class AfricaTalkingService
      *
      * @param string|array $recipients Phone number(s) to receive SMS
      * @param string $message SMS content
+     * @param string|null $senderId Override default sender ID
      * @return mixed
      * @throws \Exception
      */
-    public function sendSMS($recipients, $message)
+    public function sendSMS($recipients, $message, $senderId = null)
     {
         try {
-            // Format recipients if needed
             $recipients = $this->formatRecipients($recipients);
+            $senderId = $senderId ?? env('AFRICASTALKING_SENDER_ID', 'INFORM');
 
-            $result = $this->sms->send([
-                'to'      => $recipients,
+            $options = [
+                'to' => $recipients,
                 'message' => $message,
-                'from'    => config('africastalking.sender_id', '')
-            ]);
+            ];
 
-            Log::info('SMS sent via Africa\'s Talking', [
+            // Only add sender ID if it's not empty (Africa's Talking requirement)
+            if (!empty($senderId)) {
+                $options['from'] = $senderId;
+            }
+
+            $result = $this->sms->send($options);
+
+            Log::info('Africa\'s Talking SMS sent successfully', [
                 'recipients' => $recipients,
+                'sender_id' => $senderId,
+                'message' => $message,
                 'result' => $result
             ]);
 
@@ -58,7 +67,8 @@ class AfricaTalkingService
         } catch (Exception $e) {
             Log::error('Africa\'s Talking SMS failed', [
                 'error' => $e->getMessage(),
-                'recipients' => $recipients
+                'recipients' => $recipients,
+                'sender_id' => $senderId ?? 'default'
             ]);
             throw new \Exception("SMS sending failed: " . $e->getMessage());
         }
@@ -70,7 +80,7 @@ class AfricaTalkingService
     protected function formatRecipients($recipients)
     {
         if (is_array($recipients)) {
-            return array_map([$this, 'formatPhoneNumber'], $recipients);
+            return implode(',', array_map([$this, 'formatPhoneNumber'], $recipients));
         }
 
         return $this->formatPhoneNumber($recipients);
@@ -89,8 +99,6 @@ class AfricaTalkingService
             $cleaned = '255' . $cleaned;
         }
 
-        return '+' . $cleaned;
+        return $cleaned;
     }
-
-    // USSD, Airtime, Payments etc. can be added below...
 }
